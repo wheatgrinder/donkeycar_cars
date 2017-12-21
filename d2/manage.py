@@ -67,27 +67,25 @@ def drive(cfg, model_path=None, use_joystick=False):
     V.add(cam, outputs=['cam/image_array'], threaded=True)
  
    
-    #ncs_gn = googlenet()
-    #ncs_gn.base_dir = '~/cars/d2/models/ncs_data/'
+    #ncs_gn = googlenet(basedir=cfg.MODELS_PATH)
     #V.add(ncs_gn, inputs=['cam/image_array'],outputs=['classificaiton'],threaded=True)
     
-    ncs_ty = tinyyolo()
-    ncs_ty.base_dir = '~/cars/d2/models/ncs_data/'
+    ncs_ty = tinyyolo(basedir=cfg.MODELS_PATH)
     V.add(ncs_ty, inputs=['cam/image_array'],outputs=['ncs/image_array'],threaded=True)
     
     loop_time_display = ImgPutText()
     
     V.add(loop_time_display,inputs=['ncs/image_array','displaytext'], outputs=['ncs/image_array'])
     #classify = ImgPutText()
-    #V.add(classify,inputs=['cam/image_array','classificaiton'],outputs=['cam/image_array'])
+    #V.add(classify,inputs=['cam/image_array','classificaiton'],outputs=['ncs/image_array'])
     
     # draw a line showing where training input is cropped
     #l1 = ImgDrawLine()
     #l1.start = (0,39)
     #l1.end = (160,39)
     #l1.color = (0,255,0)
-    #l1.width=1
-    #V.add(l1, inputs=['cam/image_array'],outputs=['cam/image_array'])
+    #l1.width=10
+    #V.add(l1, inputs=['ncs/image_array'],outputs=['ncs/image_array'])
 
     
  
