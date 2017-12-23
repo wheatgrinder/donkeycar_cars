@@ -36,6 +36,9 @@ from donkeycar.parts.controller import LocalWebController, JoystickController
 from donkeycar.parts.ncs import googlenet
 from donkeycar.parts.ncs import tinyyolo
 
+from donkeycar.parts.govenor import break_for
+
+
 
 from donkeycar.parts.perfmon import driveLoopTime
 from donkeycar.parts.perfmon import coreTemp
@@ -66,16 +69,16 @@ def drive(cfg, model_path=None, use_joystick=False):
     cam = PiCamera(resolution=cfg.CAMERA_RESOLUTION)
     V.add(cam, outputs=['cam/image_array'], threaded=True)
  
-   
+    
     #ncs_gn = googlenet(basedir=cfg.MODELS_PATH)
     #V.add(ncs_gn, inputs=['cam/image_array'],outputs=['classificaiton'],threaded=True)
     
-    ncs_ty = tinyyolo(basedir=cfg.MODELS_PATH)
-    V.add(ncs_ty, inputs=['cam/image_array'],outputs=['ncs/image_array'],threaded=True)
+    ncs_ty = tinyyolo(basedir = cfg.MODELS_PATH, draw_on_img = True, probability_threshold = 0.1)
+    V.add(ncs_ty, inputs=['cam/image_array'],outputs=['ncs/image_array','ncs/found_objs'],threaded=True)
     
     loop_time_display = ImgPutText()
     
-    V.add(loop_time_display,inputs=['ncs/image_array','displaytext'], outputs=['ncs/image_array'])
+    #V.add(loop_time_display,inputs=['ncs/image_array','displaytext'], outputs=['ncs/image_array'])
     #classify = ImgPutText()
     #V.add(classify,inputs=['cam/image_array','classificaiton'],outputs=['ncs/image_array'])
     
@@ -189,6 +192,11 @@ def drive(cfg, model_path=None, use_joystick=False):
 
     #throttleText.text = throttle
     
+    # add govenor part here.  Governer has overridding power when drive mode is pilot
+    peeps = break_for('person')
+    V.add(peeps, inputs=['user/mode','angle', 'throttle','ncs/found_objs'], outputs=['angle','throttle'])
+
+
     V.add(steering, inputs=['angle'])
     V.add(throttle, inputs=['throttle'])
     
