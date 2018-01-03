@@ -101,5 +101,8 @@ ENV/
 .mypy_cache/
 
 # donkeycar data tubs
-/data
+tub_*
+*_array_.*
+record_*.json
+
 

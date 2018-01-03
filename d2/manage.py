@@ -156,10 +156,9 @@ def drive(cfg, model_path=None, use_joystick=False):
         kl.load(model_path)
     
     kResizeImg= ImgResize()
-    V.add(kResizeImg, inputs=['cam/image_array'], outputs=['resized/img_array'])
+    V.add(kResizeImg, inputs=['cam/image_array'], outputs=['cam/image_array'])
 
-    #V.add(kl, inputs=['cam/image_array'], 
-    V.add(kl, inputs=['resized/img_array'],
+    V.add(kl, inputs=['cam/image_array'],
           outputs=['pilot/angle', 'pilot/throttle'],
           run_condition='run_pilot')
     
@@ -211,7 +210,7 @@ def drive(cfg, model_path=None, use_joystick=False):
     V.add(throttle, inputs=['throttle'])
     
     #add tub to save data
-    inputs=['resized/img_array', 'user/angle', 'user/throttle', 'user/mode']
+    inputs=['cam/image_array', 'user/angle', 'user/throttle', 'user/mode']
     types=['image_array', 'float', 'float',  'str']
     
     th = TubHandler(path=cfg.DATA_PATH)
@@ -230,6 +229,7 @@ def train(cfg, tub_names, model_name):
     use the specified data in tub_names to train an artifical neural network
     saves the output trained model as model_name
     '''
+
     X_keys = ['cam/image_array']
     y_keys = ['user/angle', 'user/throttle']
 
