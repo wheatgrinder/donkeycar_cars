@@ -38,6 +38,7 @@ from donkeycar.parts.ncs import inception
 from donkeycar.parts.ncs import tinyyolo
 
 from donkeycar.parts.govenor import break_for
+from donkeycar.parts.pitft import display_text
 
 
 
@@ -60,18 +61,22 @@ def drive(cfg, model_path=None, use_joystick=False):
     V = dk.vehicle.Vehicle()
     #add pi_perfchecker
     loop_time = driveLoopTime()
-    loop_time.console=False 
+    loop_time.console=False
     #core_temp = coreTemp()
-    #throtled_status = throttled()
-    V.add(loop_time,inputs = ['timein'], outputs = ['timein','displaytext'])
+    
+    #V.add(loop_time,inputs = ['timein'], outputs = ['timein','displaytext'])
     #V.add(core_temp)
-    #V.add(throtled_status)
- 
+    throtled_status = throttled()
+    V.add(throtled_status, outputs=['displaytext'],threaded=True)
+    pitft=display_text()
+    V.add(pitft, inputs=['displaytext'], outputs=['pitft/screen'], threaded=True)
+
+
     cam = PiCamera(resolution=cfg.CAMERA_RESOLUTION)
     V.add(cam, outputs=['cam/image_array'], threaded=True)
- 
     
-    #ncs_gn = googlenet(basedir=cfg.MODELS_PATH, debug=True)
+    
+     #ncs_gn = googlenet(basedir=cfg.MODELS_PATH, debug=True)
     #V.add(ncs_gn, inputs=['cam/image_array'],outputs=['ncs/image_array', 'classificaiton'],threaded=True)
     
     #ncs_inception = inception(basedir=cfg.MODELS_PATH, probability_threshold=0.01, debug=True)
@@ -186,6 +191,7 @@ def drive(cfg, model_path=None, use_joystick=False):
                   'pilot/angle', 'pilot/throttle'], 
           outputs=['angle', 'throttle'])
     
+
     
     steering_controller = PCA9685(cfg.STEERING_CHANNEL)
     steering = PWMSteering(controller=steering_controller,
@@ -204,7 +210,7 @@ def drive(cfg, model_path=None, use_joystick=False):
         # add govenor part here.  Governer has overridding power when drive mode is pilot
     #break_for_dog = break_for('dog', .3)
     #V.add(break_for_dog, inputs=['user/mode','angle', 'throttle','ncs/found_objs'], outputs=['angle','throttle'])
-
+    
 
     V.add(steering, inputs=['angle'])
     V.add(throttle, inputs=['throttle'])
