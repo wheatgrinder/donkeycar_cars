@@ -34,6 +34,7 @@ from donkeycar.parts.controller import LocalWebController, JoystickController
 
 #NCS PARTS
 from donkeycar.parts.ncs import googlenet
+from donkeycar.parts.ncs import inception
 from donkeycar.parts.ncs import tinyyolo
 
 from donkeycar.parts.govenor import break_for
@@ -70,10 +71,14 @@ def drive(cfg, model_path=None, use_joystick=False):
     V.add(cam, outputs=['cam/image_array'], threaded=True)
  
     
-    #ncs_gn = googlenet(basedir=cfg.MODELS_PATH)
-    #V.add(ncs_gn, inputs=['cam/image_array'],outputs=['classificaiton'],threaded=True)
+    #ncs_gn = googlenet(basedir=cfg.MODELS_PATH, debug=True)
+    #V.add(ncs_gn, inputs=['cam/image_array'],outputs=['ncs/image_array', 'classificaiton'],threaded=True)
     
-    ncs_ty = tinyyolo(basedir = cfg.MODELS_PATH, draw_on_img = True, probability_threshold = 0.1)
+    #ncs_inception = inception(basedir=cfg.MODELS_PATH, probability_threshold=0.01, debug=True)
+    #V.add(ncs_inception, inputs=['cam/image_array'],outputs=['ncs/image_array', 'classificaiton'],threaded=True)
+    
+
+    ncs_ty = tinyyolo(basedir = cfg.MODELS_PATH, draw_on_img = True, probability_threshold = 0.07,debug=False)
     V.add(ncs_ty, inputs=['cam/image_array'],outputs=['ncs/image_array','ncs/found_objs'],threaded=True)
     
     loop_time_display = ImgPutText()
@@ -89,9 +94,8 @@ def drive(cfg, model_path=None, use_joystick=False):
     #l1.color = (0,255,0)
     #l1.width=10
     #V.add(l1, inputs=['ncs/image_array'],outputs=['ncs/image_array'])
-
-    
  
+    
     #driverInfo = ImgPutInfo()
     #throttleText.text='SPD:'
     #V.add(driverInfo, inputs=['cam/image_array','throttle', 'angle'],outputs=['cam/image_array'])
@@ -115,7 +119,14 @@ def drive(cfg, model_path=None, use_joystick=False):
         #modify steering_scale lower than 1.0 to have less responsive steering
         ctr = JoystickController(max_throttle=cfg.JOYSTICK_MAX_THROTTLE,
                                  steering_scale=cfg.JOYSTICK_STEERING_SCALE,
-                                 auto_record_on_throttle=cfg.AUTO_RECORD_ON_THROTTLE)
+                                 auto_record_on_throttle=cfg.AUTO_RECORD_ON_THROTTLE,throttle_axis='rz',steering_axis='x')
+
+        ctr_webview = LocalWebController()
+        V.add(ctr_webview,          
+                inputs=['ncs/image_array'], 
+                outputs=['user/angle', 'user/throttle', 'user/mode', 'recording'], 
+                threaded=True)
+
     else:        
         #This web controller will create a web server that is capable
         #of managing steering, throttle, and modes, and more.
@@ -168,7 +179,7 @@ def drive(cfg, model_path=None, use_joystick=False):
             #return pilot_angle, pilot_throttle
             #return pilot_angle, 0.80
             return pilot_angle, pilot_throttle 
-        
+    
         
     drive_mode_part = Lambda(drive_mode)
     V.add(drive_mode_part, 
@@ -181,9 +192,9 @@ def drive(cfg, model_path=None, use_joystick=False):
     steering = PWMSteering(controller=steering_controller,
                                     left_pulse=cfg.STEERING_LEFT_PWM, 
                                     right_pulse=cfg.STEERING_RIGHT_PWM)
+ 
 
-
-    
+   
     throttle_controller = PCA9685(cfg.THROTTLE_CHANNEL)
     throttle = PWMThrottle(controller=throttle_controller,
                                     max_pulse=cfg.THROTTLE_FORWARD_PWM,
@@ -191,17 +202,16 @@ def drive(cfg, model_path=None, use_joystick=False):
                                     min_pulse=cfg.THROTTLE_REVERSE_PWM)
 
     #throttleText.text = throttle
-    
-    # add govenor part here.  Governer has overridding power when drive mode is pilot
-    peeps = break_for('person')
-    V.add(peeps, inputs=['user/mode','angle', 'throttle','ncs/found_objs'], outputs=['angle','throttle'])
+        # add govenor part here.  Governer has overridding power when drive mode is pilot
+    #break_for_dog = break_for('dog', .3)
+    #V.add(break_for_dog, inputs=['user/mode','angle', 'throttle','ncs/found_objs'], outputs=['angle','throttle'])
 
 
     V.add(steering, inputs=['angle'])
     V.add(throttle, inputs=['throttle'])
     
     #add tub to save data
-    inputs=['cam/image_array', 'user/angle', 'user/throttle', 'user/mode']
+    inputs=['resized/img_array', 'user/angle', 'user/throttle', 'user/mode']
     types=['image_array', 'float', 'float',  'str']
     
     th = TubHandler(path=cfg.DATA_PATH)
