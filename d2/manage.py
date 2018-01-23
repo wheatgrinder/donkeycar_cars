@@ -277,7 +277,9 @@ def drive(cfg, model_path=None, use_joystick=False):
     
     
     #add tub to save data
-    inputs=['cam/image_array', 'user/angle', 'user/throttle', 'user/mode']
+    #inputs=['cam/image_array', 'user/angle', 'user/throttle', 'user/mode']
+    # need local_angle and local_pilot to save values to tub
+    inputs=['cam/image_array', 'angle', 'throttle', 'user/mode']
     types=['image_array', 'float', 'float',  'str']
     
     th = TubHandler(path=cfg.DATA_PATH)
