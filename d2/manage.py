@@ -146,7 +146,7 @@ def drive(cfg, model_path=None, use_joystick=False):
         ctr = JoystickController(max_throttle=cfg.JOYSTICK_MAX_THROTTLE,
                                  steering_scale=cfg.JOYSTICK_STEERING_SCALE,
                                  auto_record_on_throttle=cfg.AUTO_RECORD_ON_THROTTLE,
-                                 throttle_axis='y',
+                                 throttle_axis='rightTrig2', #throttle_axis='y',
                                  steering_axis='x',
                                  panning_axis='z',
                                  tilting_axis='rz')
@@ -166,7 +166,7 @@ def drive(cfg, model_path=None, use_joystick=False):
     
     V.add(ctr,          
           inputs=['ncs/image_array'],
-          outputs=['user/angle', 'user/throttle', 'user/mode', 'recording','user/pan','user/tilt'],
+          outputs=['user/angle', 'user/throttle', 'user/mode', 'recording','pan','tilt'],
           threaded=True)
     
     # add the LED controller part
@@ -267,20 +267,52 @@ def drive(cfg, model_path=None, use_joystick=False):
     V.add(status_led, inputs=['user/mode', 'recording'])    
  
 
+    #V.add(steering, inputs=['angle'], outputs=['user/angle'])
+    #V.add(throttle, inputs=['throttle'], outputs=['user/throttle']) 
+    
     V.add(steering, inputs=['angle'])
     V.add(throttle, inputs=['throttle'])
     
-    V.add(panning, inputs=['user/pan'])
-    V.add(tilting, inputs=['user/tilt'])
+    V.add(panning, inputs=['pan'])
+    V.add(tilting, inputs=['tilt'])
     #V.add(wagging, inputs=['throttle'])
-
+ 
     
-    
-    #add tub to save data
-    #inputs=['cam/image_array', 'user/angle', 'user/throttle', 'user/mode']
     # need local_angle and local_pilot to save values to tub
-    inputs=['cam/image_array', 'angle', 'throttle', 'user/mode']
-    types=['image_array', 'float', 'float',  'str']
+    # however training does not seem to respect the user mode.. 
+    #     X_keys = ['cam/image_array']
+    #     y_keys = ['user/angle', 'user/throttle']
+    # so we need to overwrite the user/angle user/throttle.  
+    # training does not seem to use user/mode values though they are written to tub
+    ''''
+    def drive_mode_remap(mode, 
+                   user_angle, user_throttle,
+                   pilot_angle, pilot_throttle):
+        if mode == 'user': 
+            return user_angle, user_throttle
+        
+        elif mode == 'local_angle':
+            return pilot_angle, user_throttle
+            #return pilot_angle, 0.30
+        else: 
+            #overite throttle
+            #return pilot_angle, pilot_throttle 
+            #return pilot_angle, 0.80
+            return pilot_angle, pilot_throttle 
+    '''
+    #"use the labda drive mode to remap the outputs just before tub writting.. " 
+    #remap_out = Lambda(drive_mode_remap)
+    #V.add(remap_out, 
+    #      inputs=['user/mode', 'user/angle', 'user/throttle',
+    #              'pilot/angle', 'pilot/throttle'], 
+    #      outputs=['user/angle', 'user/throttle'])
+
+    #add tub to save data
+    # tub inputs to accep angel and throttle values regardless of mode
+    #inputs=['cam/image_array', 'user/angle', 'user/throttle', 'pan', 'tilt', 'user/mode']
+    inputs=['cam/image_array', 'angle', 'throttle', 'pan', 'tilt', 'user/mode']
+    
+    types=['image_array', 'float', 'float', 'float','float', 'str']
     
     th = TubHandler(path=cfg.DATA_PATH)
     tub = th.new_tub_writer(inputs=inputs, types=types)
@@ -302,10 +334,16 @@ def train(cfg, tub_names, model_name):
     '''
 
     X_keys = ['cam/image_array']
-    y_keys = ['user/angle', 'user/throttle']
+    # change to use angel throttle regardless of mode
+    #y_keys = ['user/angle', 'user/throttle']
+    y_keys = ['angle', 'throttle']
+
+
 
     def rt(record):
-        record['user/angle'] = dk.utils.linear_bin(record['user/angle'])
+        # change to use angel throttle regardless of mode
+        #record['user/angle'] = dk.utils.linear_bin(record['user/angle'])
+        record['angle'] = dk.utils.linear_bin(record['angle'])
         return record
 
     kl = KerasCroppedCategorical()
